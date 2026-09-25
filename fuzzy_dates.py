@@ -53,10 +53,10 @@ def parse_date(d: str) -> datetime:
     raise ValueError(f"Could not parse date string '{d}' using supported formats")
 
 
-def fuzz_utc(d: Any) -> datetime:
+def fuzzy_utc(d: Any) -> datetime | None:
     """Normalizes a datetime, date, or string representation into an aware UTC datetime."""
-    if d is None:
-        raise ValueError("Cannot convert None to UTC datetime")
+    if not d:
+        return None
 
     val = d
 
@@ -80,8 +80,8 @@ def fuzzy_same(d: Any, d2: Any, tolerance_seconds: float = 0.0) -> bool:
 
     Returns False safely if input strings are unparseable or types are invalid.
     """
-    utc1 = fuzz_utc(d)
-    utc2 = fuzz_utc(d2)
+    utc1 = fuzzy_utc(d)
+    utc2 = fuzzy_utc(d2)
 
     if tolerance_seconds > 0:
         return abs((utc1 - utc2).total_seconds()) <= tolerance_seconds
