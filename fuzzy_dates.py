@@ -1,3 +1,4 @@
+from argparse import ArgumentTypeError
 from datetime import datetime, timedelta, timezone, date
 from typing import Any
 
@@ -110,6 +111,54 @@ def as_casual_str(d: datetime) -> str:
     return d.strftime("%m/%d/%Y")
 
 
+def parse_interval(value: str) -> timedelta | None:
+    """Parses "90", "1.5s", "250ms", "10m", "2h" or "3d" into a timedelta. Plain numbers are seconds"""
+    if not value:
+        return None
+    s = str(value).strip().lower()
+    try:
+        # Plain seconds
+        seconds = int(s)
+        return timedelta(seconds=seconds)
+    except ValueError:
+        pass
+    # Suffixed formats
+    if s.endswith("ms"):
+        num = float(s[:-2])
+        return timedelta(milliseconds=num)
+    if s.endswith("s"):
+        num = float(s[:-1])
+        return timedelta(seconds=num)
+    if s.endswith("m"):
+        num = float(s[:-1])
+        return timedelta(minutes=num)
+    if s.endswith("h"):
+        num = float(s[:-1])
+        return timedelta(hours=num)
+    if s.endswith("d"):
+        num = float(s[:-1])
+        return timedelta(days=num)
+    # Fallback: try float seconds
+    try:
+        return timedelta(seconds=float(s))
+    except Exception:
+        raise ArgumentTypeError(f"Unrecognized interval format: {value}")
+
+
+def to_days(interval: timedelta) -> float:
+    """You can get just the int of days using the .days property, this returns fractional days too"""
+    return interval.total_seconds() / (24 * 60 * 60)
+
+
+def to_utc_iso_8601(d: datetime) -> str:
+    # Convert to UTC if it has timezone info
+    if d.tzinfo is not None:
+        d = d.astimezone(timezone.utc).replace(tzinfo=None)
+
+    # Format as ISO 8601 string with Z suffix to indicate UTC
+    return d.isoformat() + 'Z'
+
+
 if __name__ == '__main__':
     now = datetime.now()
     today = now - timedelta(hours=1)
@@ -126,7 +175,7 @@ if __name__ == '__main__':
     print("days ago", as_casual_str(days_ago))
     print("months ago", as_casual_str(months_ago))
 
-    # are_the_same examples
+    # fuzzy_same examples
     aware = datetime.now(tz=timezone.utc)
     naive = datetime.utcnow()
-    print("same?", are_the_same(aware, naive))
+    print("same?", fuzzy_same(aware, naive))
