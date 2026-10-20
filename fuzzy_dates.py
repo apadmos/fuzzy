@@ -1,3 +1,4 @@
+import math
 from argparse import ArgumentTypeError
 from datetime import datetime, timedelta, timezone, date
 from typing import Any
@@ -145,6 +146,30 @@ def parse_interval(value: str) -> timedelta | None:
         raise ArgumentTypeError(f"Unrecognized interval format: {value}")
 
 
+def as_duration_str(interval: timedelta) -> str:
+    """A wait or length of time in its largest units, rounded up so it's never understated:
+    45s -> "45 seconds", 61s -> "2 minutes", 90m -> "1 hour 30 minutes", 26h -> "1 day 2 hours".
+    Seconds are only used under a minute; at most two units are shown"""
+    total_seconds: int = max(0, math.ceil(interval.total_seconds()))
+    if total_seconds < 60:
+        return f"{total_seconds} second" if total_seconds == 1 else f"{total_seconds} seconds"
+
+    total_minutes: int = math.ceil(total_seconds / 60)
+    if total_minutes < 60:
+        return f"{total_minutes} minute" if total_minutes == 1 else f"{total_minutes} minutes"
+
+    if total_minutes < 24 * 60:
+        hours, minutes = divmod(total_minutes, 60)
+        larger: str = f"{hours} hour" if hours == 1 else f"{hours} hours"
+        smaller: str = f"{minutes} minute" if minutes == 1 else f"{minutes} minutes"
+    else:
+        total_hours: int = math.ceil(total_minutes / 60)
+        days, hours = divmod(total_hours, 24)
+        larger: str = f"{days} day" if days == 1 else f"{days} days"
+        smaller: str = f"{hours} hour" if hours == 1 else f"{hours} hours"
+    return f"{larger} {smaller}" if not smaller.startswith("0 ") else larger
+
+
 def to_days(interval: timedelta) -> float:
     """You can get just the int of days using the .days property, this returns fractional days too"""
     return interval.total_seconds() / (24 * 60 * 60)
@@ -174,6 +199,10 @@ if __name__ == '__main__':
     print("next_week", as_casual_str(next_week))
     print("days ago", as_casual_str(days_ago))
     print("months ago", as_casual_str(months_ago))
+
+    # as_duration_str examples
+    for seconds in [1, 45, 60, 61, 3599, 3600, 5400, 86400, 93600]:
+        print(seconds, as_duration_str(timedelta(seconds=seconds)))
 
     # fuzzy_same examples
     aware = datetime.now(tz=timezone.utc)
