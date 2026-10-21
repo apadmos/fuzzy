@@ -2,6 +2,10 @@ import math
 from argparse import ArgumentTypeError
 from datetime import datetime, timedelta, timezone, date
 from typing import Any
+from zoneinfo import ZoneInfo
+
+"""New York time: EST in winter, EDT in summer"""
+EASTERN: ZoneInfo = ZoneInfo("America/New_York")
 
 
 def _to_aware(dt: datetime) -> datetime:
@@ -91,25 +95,31 @@ def fuzzy_same(d: Any, d2: Any, tolerance_seconds: float = 0.0) -> bool:
     return utc1 == utc2
 
 
-def as_casual_str(d: datetime) -> str:
-    today = datetime.now()
-    diff = d.date() - today.date()
-    days = diff.days
+def now_eastern() -> datetime:
+    """Current time in New York (EST or EDT), timezone-aware"""
+    return datetime.now(tz=EASTERN)
 
-    if -30 < days < 30:
-        s = {
-            0: 'today',
-            1: 'tomorrow',
-            -1: 'yesterday',
-            -7: '1 week ago',
-            7: 'in 1 week',
-        }.get(days)
-        if s:
-            return s
-        if days < 0:
-            return f"{abs(days)} days ago"
-        return f"in {days} days"
-    return d.strftime("%m/%d/%Y")
+
+def today_eastern() -> date:
+    """Today's date in New York, for comparing with date columns like show_materialized.end_date"""
+    return now_eastern().date()
+
+
+def as_casual_str(d: datetime | date) -> str:
+    """
+    d described for people in New York time: "today at 1:45 PM", "yesterday at 9:10 AM", "tomorrow at 8:00 PM",
+    otherwise "Oct 20, 2026, 1:45 PM". A plain date leaves the time off: "today", "Oct 20, 2026".
+    "Today" is New York's today, not the server's. Naive datetimes are treated as the system's local time,
+    like fuzzy_utc.
+    """
+    has_time: bool = isinstance(d, datetime)
+    when: datetime | None = fuzzy_utc(d).astimezone(EASTERN) if has_time else None
+    day: date = when.date() if has_time else d
+    relative_day: str | None = {0: "today", 1: "tomorrow", -1: "yesterday"}.get((day - today_eastern()).days)
+
+    if relative_day:
+        return f"{relative_day} at {when.strftime('%-I:%M %p')}" if has_time else relative_day
+    return when.strftime("%b %-d, %Y, %-I:%M %p") if has_time else day.strftime("%b %-d, %Y")
 
 
 def parse_interval(value: str) -> timedelta | None:
@@ -199,6 +209,7 @@ if __name__ == '__main__':
     print("next_week", as_casual_str(next_week))
     print("days ago", as_casual_str(days_ago))
     print("months ago", as_casual_str(months_ago))
+    print("plain date", as_casual_str(date.today()))
 
     # as_duration_str examples
     for seconds in [1, 45, 60, 61, 3599, 3600, 5400, 86400, 93600]:
