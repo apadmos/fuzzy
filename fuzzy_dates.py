@@ -5,7 +5,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 """New York time: EST in winter, EDT in summer"""
-EASTERN: ZoneInfo = ZoneInfo("America/New_York")
+EASTERN_TZ: ZoneInfo = ZoneInfo("America/New_York")
 
 
 def _to_aware(dt: datetime) -> datetime:
@@ -97,7 +97,7 @@ def fuzzy_same(d: Any, d2: Any, tolerance_seconds: float = 0.0) -> bool:
 
 def now_eastern() -> datetime:
     """Current time in New York (EST or EDT), timezone-aware"""
-    return datetime.now(tz=EASTERN)
+    return datetime.now(tz=EASTERN_TZ)
 
 
 def today_eastern() -> date:
@@ -113,7 +113,7 @@ def as_casual_str(d: datetime | date) -> str:
     like fuzzy_utc.
     """
     has_time: bool = isinstance(d, datetime)
-    when: datetime | None = fuzzy_utc(d).astimezone(EASTERN) if has_time else None
+    when: datetime | None = fuzzy_utc(d).astimezone(EASTERN_TZ) if has_time else None
     day: date = when.date() if has_time else d
     relative_day: str | None = {0: "today", 1: "tomorrow", -1: "yesterday"}.get((day - today_eastern()).days)
 
