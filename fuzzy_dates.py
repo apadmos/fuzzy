@@ -99,6 +99,8 @@ def now_eastern() -> datetime:
     """Current time in New York (EST or EDT), timezone-aware"""
     return datetime.now(tz=EASTERN_TZ)
 
+def now_utc():
+    return datetime.now(tz=timezone.utc)
 
 def today_eastern() -> date:
     """Today's date in New York, for comparing with date columns like show_materialized.end_date"""
