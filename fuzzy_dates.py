@@ -2,6 +2,19 @@ import math
 from argparse import ArgumentTypeError
 from datetime import datetime, timedelta, timezone, date
 from typing import Any
+from zoneinfo import ZoneInfo
+
+EASTERN_TZ = ZoneInfo("America/New_York")
+
+
+def utc_now() -> datetime:
+    """The current time as an aware UTC datetime"""
+    return datetime.now(tz=timezone.utc)
+
+
+def eastern_now() -> datetime:
+    """The current time as an aware New York datetime (EST or EDT as the date requires)"""
+    return datetime.now(tz=EASTERN_TZ)
 
 
 def _to_aware(dt: datetime) -> datetime:
